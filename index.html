@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microbit.Web Dashboard & Controller</title>
+    <!-- Google Font & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Teachable Machine Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    
+    <style>
+        :root {
+            /* Tema Gelap (Warna Slate & Sky Blue yang lebih elegan) */
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --sidebar-width: 250px;
+            --log-width: 320px;
+            --danger: #f43f5e;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        /* Tema Terang */
+        [data-theme="light"] {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Transisi halus untuk perubahan tema di semua elemen utama */
+        body, header, sidebar, main, .card, .log-panel, .log-item, .dpad-btn, .status-badge, .nav-item, .btn-theme {
+            transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- HEADER --- */
+        header {
+            height: 65px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        /* LOGO LEBIH BAGUS DENGAN GRADIENT & ANIMASI */
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.35rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand i {
+            -webkit-text-fill-color: var(--primary);
+            animation: pulseGlow 2.5s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+            0% { transform: scale(1); text-shadow: 0 0 5px rgba(56, 189, 248, 0.2); }
+            100% { transform: scale(1.15); text-shadow: 0 0 15px var(--primary); }
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* PEMISAH TOMBOL TEMA */
+        .theme-separator {
+            padding-right: 16px;
+            border-right: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+        }
+
+        /* Tombol Tema */
+        .btn-theme {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .btn-theme:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 5px 15px rgba(56, 189, 248, 0.25);
+        }
+
+        .btn-theme i {
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 20px;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .status-dot.connected { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-dot.connecting { background-color: var(--warning); box-shadow: 0 0 8px var(--warning); }
+        .status-dot.disconnected { background-color: var(--danger); }
+
+        .btn-connect {
+            padding: 8px 18px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary);
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-connect:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(56, 189, 248, 0.4);
+        }
+
+        .btn-connect.connected {
+            background-color: var(--danger);
+            box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3);
+        }
+
+        /* --- LAYOUT MAIN --- */
+        .app-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 65px);
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR NAVBAR --- */
+        sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .nav-item i {
+            font-size: 1.1rem;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(56, 189, 248, 0.1);
+            color: var(--text-main);
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            border-left: 4px solid var(--primary);
+        }
+
+        /* Sidebar Footer / Credit */
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 16px 8px 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .author-name {
+            color: var(--text-muted);
+            font-weight: 700;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .author-name:hover {
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary);
+            transform: scale(1.05);
+        }
+
+        /* --- CONTENT AREA --- */
+        main {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            background-color: var(--bg-main);
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeInSection 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeInSection {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-main);
+        }
+
+        .section-title i {
+            color: var(--primary);
+            background-color: rgba(56, 189, 248, 0.15);
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 1.25rem;
+        }
+
+        /* DASHBOARD UI */
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .card-header i {
+            font-size: 1.2rem;
+            color: var(--primary);
+            opacity: 0.8;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .card-unit {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* D-PAD UI */
+        .dpad-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 0;
+        }
+
+        .dpad-container {
+            display: grid;
+            grid-template-columns: repeat(3, 90px);
+            grid-template-rows: repeat(3, 90px);
+            gap: 16px;
+        }
+
+        .dpad-btn {
+            background-color: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 1.75rem;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            user-select: none;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .dpad-btn:hover {
+            transform: scale(1.15) translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 12px 25px rgba(56, 189, 248, 0.25);
+            color: var(--primary);
+            z-index: 2;
+        }
+
+        .dpad-btn:active {
+            background-color: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            transform: scale(0.9) translateY(2px);
+            box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #btn-up { grid-column: 2; grid-row: 1; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 3; }
+
+        /* --- TEACHABLE MACHINE SECTION --- */
+        .tm-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+
+        .tm-input {
+            flex: 1;
+            min-width: 280px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .tm-input:focus {
+            border-color: var(--primary);
+        }
+
+        .tm-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn-tm {
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+        }
+
+        .btn-tm-primary {
+            background-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-tm-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-tm-secondary {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-tm-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-tm-danger {
+            background-color: rgba(244, 63, 94, 0.15);
+            color: var(--danger);
+            border: 1px solid transparent;
+        }
+
+        .btn-tm-danger:hover {
+            background-color: var(--danger);
+            color: #ffffff;
+        }
+
+        .btn-tm:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .tm-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .tm-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .tm-webcam-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        #webcam-container {
+            width: 100%;
+            max-width: 320px;
+            aspect-ratio: 1;
+            background-color: var(--bg-main);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border-color);
+        }
+
+        #webcam-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .tm-placeholder {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .tm-predictions-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .tm-current {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tm-current-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .tm-current-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .tm-current-conf {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .tm-current-conf.high {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .tm-current-conf.low {
+            color: var(--warning);
+        }
+
+        #label-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tm-pred-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background-color: var(--bg-main);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .tm-pred-item.top {
+            border-color: var(--primary);
+            background-color: rgba(56, 189, 248, 0.08);
+        }
+
+        .tm-pred-bar {
+            height: 6px;
+            background-color: var(--border-color);
+            border-radius: 3px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .tm-pred-fill {
+            height: 100%;
+            background-color: var(--primary);
+            border-radius: 3px;
+            transition: width 0.2s ease;
+        }
+
+        .tm-status {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* --- SYSTEM LOG / NOTIFICATION PANEL --- */
+        .log-panel {
+            width: var(--log-width);
+            background-color: var(--bg-card);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.02);
+        }
+
+        .log-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-clear {
+            background: rgba(244, 63, 94, 0.1);
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-clear:hover {
+            background: var(--danger);
+            color: #ffffff;
+        }
+
+        .log-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .log-item {
+            padding: 14px;
+            border-radius: 10px;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideInLog 0.3s ease-out;
+        }
+
+        @keyframes slideInLog {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+        }
+
+        .badge-info { background-color: rgba(56, 189, 248, 0.15); color: var(--primary); }
+        .badge-tx { background-color: rgba(16, 185, 129, 0.15); color: var(--success); }
+        .badge-rx { background-color: rgba(244, 63, 94, 0.15); color: var(--danger); }
+        .badge-warn { background-color: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .badge-error { background-color: rgba(244, 63, 94, 0.25); color: var(--danger); }
+
+        .log-msg {
+            word-break: break-all;
+            font-family: monospace;
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+
+        @media (max-width: 900px) {
+            .log-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="brand">
+            <i class="fa-solid fa-microchip"></i>
+            <span>Microbit.Web</span>
+        </div>
+        <div class="header-controls">
+            <!-- GARIS PEMISAH & TOMBOL TEMA -->
+            <div class="theme-separator">
+                <button id="themeToggleBtn" class="btn-theme" title="Ubah Tema">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+
+            <div class="status-badge">
+                <div id="statusDot" class="status-dot disconnected"></div>
+                <span id="statusText">Terputus</span>
+            </div>
+            <button id="connectBtn" class="btn-connect">
+                <i class="fa-solid fa-plug"></i>
+                <span>Hubungkan</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="app-container">
+        <!-- SIDEBAR NAVBAR -->
+        <sidebar>
+            <div class="nav-item active" onclick="switchTab('dashboard', this)">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('dpad', this)">
+                <i class="fa-solid fa-gamepad"></i>
+                <span>D-Pad Controller</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('teachable', this)">
+                <i class="fa-solid fa-brain"></i>
+                <span>Teachable Machine</span>
+            </div>
+
+            <!-- FOOTER CREDIT -->
+            <div class="sidebar-footer">
+                Created By : <br>
+                <span class="author-name">Bintang Ahsan Rakaiman</span>
+            </div>
+        </sidebar>
+
+        <!-- MAIN CONTENT AREA -->
+        <main>
+            <!-- SECTION DASHBOARD -->
+            <div id="view-dashboard" class="view-section active">
+                <h2 class="section-title">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    Dashboard Overview
+                </h2>
+                <div class="grid-cards">
+                    <!-- Card Suhu / Celcius -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span>Suhu Sensor</span>
+                            <i class="fa-solid fa-temperature-high"></i>
+                        </div>
+                        <div class="card-value">
+                            <span id="tempValue">--</span> <span class="card-unit">°C</span>
+                        </div>
+                    </div>
+                    <!-- Card Total Pesan Masuk -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span>Data Diterima (RX)</span>
+                            <i class="fa-solid fa-inbox"></i>
+                        </div>
+                        <div class="card-value">
+                            <span id="rxCount">0</span> <span class="card-unit">pesan</span>
+                        </div>
+                    </div>
+                    <!-- Card Total Pesan Terkirim -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span>Data Terkirim (TX)</span>
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </div>
+                        <div class="card-value">
+                            <span id="txCount">0</span> <span class="card-unit">perintah</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION D-PAD -->
+            <div id="view-dpad" class="view-section">
+                <h2 class="section-title">
+                    <i class="fa-solid fa-gamepad"></i>
+                    D-Pad Controller
+                </h2>
+                <div class="dpad-wrapper">
+                    <div class="dpad-container">
+                        <button class="dpad-btn" id="btn-up"><i class="fa-solid fa-chevron-up"></i></button>
+                        <button class="dpad-btn" id="btn-left"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button class="dpad-btn" id="btn-right"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button class="dpad-btn" id="btn-down"><i class="fa-solid fa-chevron-down"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION TEACHABLE MACHINE -->
+            <div id="view-teachable" class="view-section">
+                <h2 class="section-title">
+                    <i class="fa-solid fa-brain"></i>
+                    Teachable Machine
+                </h2>
+
+                <div class="tm-controls">
+                    <input type="text" id="tmModelUrl" class="tm-input" 
+                           placeholder="Tempel link model Teachable Machine di sini (contoh: https://teachablemachine.withgoogle.com/models/XXXX/)">
+                    <button id="tmLoadBtn" class="btn-tm btn-tm-primary" onclick="loadTeachableModel()">
+                        <i class="fa-solid fa-download"></i> Load Model
+                    </button>
+                    <button id="tmStartBtn" class="btn-tm btn-tm-secondary" onclick="startWebcam()" disabled>
+                        <i class="fa-solid fa-video"></i> Start Camera
+                    </button>
+                    <button id="tmStopBtn" class="btn-tm btn-tm-danger" onclick="stopWebcam()" disabled>
+                        <i class="fa-solid fa-stop"></i> Stop
+                    </button>
+                </div>
+
+                <div class="tm-layout">
+                    <div class="tm-webcam-card">
+                        <div id="webcam-container">
+                            <div class="tm-placeholder" id="tmPlaceholder">
+                                <i class="fa-solid fa-camera" style="font-size:2rem;margin-bottom:10px;display:block;"></i>
+                                Kamera belum aktif.<br>Load model lalu tekan Start Camera.
+                            </div>
+                        </div>
+                        <div class="tm-status" id="tmStatus">Siap memuat model...</div>
+                    </div>
+
+                    <div class="tm-predictions-card">
+                        <div class="tm-current">
+                            <div class="tm-current-label">Kelas yang dikirim ke Micro:bit</div>
+                            <div class="tm-current-value" id="tmCurrentClass">—</div>
+                            <div class="tm-current-conf" id="tmCurrentConf">Confidence: —</div>
+                        </div>
+                        <div id="label-container"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR: SYSTEM LOG & NOTIFICATIONS -->
+        <div class="log-panel">
+            <div class="log-header">
+                <span><i class="fa-solid fa-bell"></i> System Log</span>
+                <button class="btn-clear" onclick="clearLogs()"><i class="fa-solid fa-trash-can"></i> Clear</button>
+            </div>
+            <div class="log-content" id="logArea">
+                <!-- Log items akan ditambahkan secara dinamis di sini -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- THEME TOGGLE LOGIC ---
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const themeIcon = themeToggleBtn.querySelector('i');
+
+        themeToggleBtn.addEventListener('click', () => {
+            const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+            
+            // Animasi rotasi saat diklik
+            themeIcon.style.transform = 'rotate(180deg) scale(0.5)';
+            themeIcon.style.opacity = '0';
+
+            setTimeout(() => {
+                if (isLightMode) {
+                    // Berubah ke Gelap (Moon)
+                    document.documentElement.removeAttribute('data-theme');
+                    themeIcon.className = 'fa-solid fa-moon';
+                } else {
+                    // Berubah ke Terang (Sun)
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    themeIcon.className = 'fa-solid fa-sun';
+                }
+                
+                // Kembalikan ukuran dan opacity
+                themeIcon.style.transform = 'rotate(360deg) scale(1.1)';
+                themeIcon.style.opacity = '1';
+                
+                // Reset rotasi setelah selesai
+                setTimeout(() => {
+                    themeIcon.style.transition = 'none';
+                    themeIcon.style.transform = 'rotate(0deg) scale(1)';
+                    setTimeout(() => themeIcon.style.transition = 'transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.4s ease', 50);
+                }, 600);
+            }, 300);
+        });
+
+        // --- MICROBIT BLUETOOTH LOGIC (TETAP SAMA) ---
+        const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; 
+        const RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; 
+
+        let bleDevice;
+        let rxCharacteristic;
+
+        let countRx = 0;
+        let countTx = 0;
+
+        const connectBtn = document.getElementById('connectBtn');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const logArea = document.getElementById('logArea');
+        const tempValue = document.getElementById('tempValue');
+        const rxCountEl = document.getElementById('rxCount');
+        const txCountEl = document.getElementById('txCount');
+
+        function switchTab(tabName, element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+
+            element.classList.add('active');
+            document.getElementById(`view-${tabName}`).classList.add('active');
+        }
+
+        function logSystem(message, type = "INFO") {
+            const time = new Date().toLocaleTimeString();
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+
+            let badgeClass = "badge-info";
+            if (type === "TX") badgeClass = "badge-tx";
+            if (type === "RX") badgeClass = "badge-rx";
+            if (type === "WARN") badgeClass = "badge-warn";
+            if (type === "ERROR") badgeClass = "badge-error";
+
+            logItem.innerHTML = `
+                <div class="log-meta">
+                    <span class="badge ${badgeClass}">${type}</span>
+                    <span>${time}</span>
+                </div>
+                <div class="log-msg">${message}</div>
+            `;
+
+            logArea.appendChild(logItem);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function clearLogs() {
+            logArea.innerHTML = '';
+        }
+
+        connectBtn.addEventListener('click', async () => {
+            if (bleDevice && bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+                return;
+            }
+
+            try {
+                logSystem("Mencari perangkat Micro:bit...", "INFO");
+                updateStatus("Mencari...", "connecting");
+
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: "BBC micro:bit" }],
+                    optionalServices: [UART_SERVICE_UUID]
+                });
+
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                logSystem("Menghubungkan ke GATT Server...", "INFO");
+                updateStatus("Menghubungkan...", "connecting");
+
+                const server = await bleDevice.gatt.connect();
+                const service = await server.getPrimaryService(UART_SERVICE_UUID);
+
+                const txCharacteristic = await service.getCharacteristic(TX_CHARACTERISTIC_UUID);
+                await txCharacteristic.startNotifications();
+                txCharacteristic.addEventListener('characteristicvaluechanged', handleIncomingData);
+
+                rxCharacteristic = await service.getCharacteristic(RX_CHARACTERISTIC_UUID);
+
+                updateStatus("Terhubung", "connected");
+                connectBtn.classList.add('connected');
+                connectBtn.innerHTML = `<i class="fa-solid fa-plug-circle-xmark"></i><span>Putuskan</span>`;
+                logSystem(`Terhubung ke ${bleDevice.name}`, "INFO");
+
+            } catch (error) {
+                logSystem(error.message, "ERROR");
+                updateStatus("Gagal Terhubung", "disconnected");
+            }
+        });
+
+        function updateStatus(text, stateClass) {
+            statusText.innerText = text;
+            statusDot.className = `status-dot ${stateClass}`;
+        }
+
+        function onDisconnected() {
+            logSystem("Koneksi terputus.", "WARN");
+            updateStatus("Terputus", "disconnected");
+            connectBtn.classList.remove('connected');
+            connectBtn.innerHTML = `<i class="fa-solid fa-plug"></i><span>Hubungkan</span>`;
+            rxCharacteristic = null;
+        }
+
+        function handleIncomingData(event) {
+            const value = event.target.value;
+            const decoder = new TextDecoder('utf-8');
+            const data = decoder.decode(value).trim();
+
+            countRx++;
+            rxCountEl.innerText = countRx;
+
+            logSystem(data, "RX");
+
+            if (!isNaN(data)) {
+                tempValue.innerText = data;
+            } else if (data.includes("TEMP:")) {
+                const temp = data.split(":")[1];
+                if (temp) tempValue.innerText = temp;
+            }
+        }
+
+        async function sendData(data) {
+            if (!rxCharacteristic) {
+                logSystem("Gagal kirim: Bluetooth belum terhubung!", "WARN");
+                return;
+            }
+            try {
+                const encoder = new TextEncoder();
+                await rxCharacteristic.writeValue(encoder.encode(data + "\n"));
+                
+                countTx++;
+                txCountEl.innerText = countTx;
+
+                logSystem(data, "TX");
+            } catch (error) {
+                logSystem(`Gagal kirim: ${error.message}`, "ERROR");
+            }
+        }
+
+        const dpadButtons = [
+            { id: 'btn-up', command: 'up' },
+            { id: 'btn-down', command: 'down' },
+            { id: 'btn-left', command: 'left' },
+            { id: 'btn-right', command: 'right' }
+        ];
+
+        let activeCommand = null;
+
+        dpadButtons.forEach(btn => {
+            const element = document.getElementById(btn.id);
+
+            const handlePress = (e) => {
+                if (e) e.preventDefault();
+                if (activeCommand !== btn.command) {
+                    activeCommand = btn.command;
+                    sendData(btn.command);
+                }
+            };
+
+            const handleRelease = (e) => {
+                if (e) e.preventDefault();
+                if (activeCommand === btn.command) {
+                    activeCommand = null;
+                    sendData('stop');
+                }
+            };
+
+            element.addEventListener('mousedown', handlePress);
+            element.addEventListener('touchstart', handlePress);
+            element.addEventListener('mouseup', handleRelease);
+            element.addEventListener('mouseleave', handleRelease);
+            element.addEventListener('touchend', handleRelease);
+        });
+
+        // ============================================================
+        // TEACHABLE MACHINE LOGIC
+        // ============================================================
+        let tmModel = null;
+        let tmWebcam = null;
+        let tmMaxPredictions = 0;
+        let tmIsRunning = false;
+        let tmLastSentClass = null;          // Kelas terakhir yang berhasil dikirim
+        let tmAnimationFrame = null;
+        const CONFIDENCE_THRESHOLD = 0.85;   // 85%
+
+        const tmStatusEl = document.getElementById('tmStatus');
+        const tmCurrentClassEl = document.getElementById('tmCurrentClass');
+        const tmCurrentConfEl = document.getElementById('tmCurrentConf');
+        const labelContainer = document.getElementById('label-container');
+        const webcamContainer = document.getElementById('webcam-container');
+        const tmPlaceholder = document.getElementById('tmPlaceholder');
+        const tmLoadBtn = document.getElementById('tmLoadBtn');
+        const tmStartBtn = document.getElementById('tmStartBtn');
+        const tmStopBtn = document.getElementById('tmStopBtn');
+
+        function setTmStatus(text) {
+            tmStatusEl.innerText = text;
+        }
+
+        async function loadTeachableModel() {
+            let url = document.getElementById('tmModelUrl').value.trim();
+            if (!url) {
+                logSystem("Masukkan URL model Teachable Machine terlebih dahulu!", "WARN");
+                setTmStatus("URL model kosong.");
+                return;
+            }
+
+            // Pastikan URL berakhir dengan /
+            if (!url.endsWith('/')) url += '/';
+
+            tmLoadBtn.disabled = true;
+            setTmStatus("Memuat model...");
+            logSystem("Memuat model dari: " + url, "INFO");
+
+            try {
+                const modelURL = url + "model.json";
+                const metadataURL = url + "metadata.json";
+
+                tmModel = await tmImage.load(modelURL, metadataURL);
+                tmMaxPredictions = tmModel.getTotalClasses();
+
+                // Buat elemen label prediksi
+                labelContainer.innerHTML = '';
+                for (let i = 0; i < tmMaxPredictions; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'tm-pred-item';
+                    div.innerHTML = `
+                        <span class="pred-name">Class ${i}</span>
+                        <span class="pred-prob">0%</span>
+                    `;
+                    labelContainer.appendChild(div);
+                }
+
+                setTmStatus("Model berhasil dimuat! Tekan Start Camera.");
+                logSystem(`Model berhasil dimuat (${tmMaxPredictions} kelas)`, "INFO");
+                tmStartBtn.disabled = false;
+            } catch (err) {
+                console.error(err);
+                setTmStatus("Gagal memuat model. Periksa URL.");
+                logSystem("Gagal memuat model: " + err.message, "ERROR");
+                tmStartBtn.disabled = true;
+            } finally {
+                tmLoadBtn.disabled = false;
+            }
+        }
+
+        async function startWebcam() {
+            if (!tmModel) {
+                logSystem("Model belum dimuat!", "WARN");
+                return;
+            }
+
+            try {
+                setTmStatus("Mengaktifkan kamera...");
+                tmStartBtn.disabled = true;
+
+                // Setup webcam (ukuran 224x224, flip horizontal)
+                const flip = true;
+                tmWebcam = new tmImage.Webcam(224, 224, flip);
+                await tmWebcam.setup();   // Minta izin kamera
+                await tmWebcam.play();
+
+                // Tampilkan canvas webcam
+                tmPlaceholder.style.display = 'none';
+                webcamContainer.innerHTML = '';
+                webcamContainer.appendChild(tmWebcam.canvas);
+
+                tmIsRunning = true;
+                tmStopBtn.disabled = false;
+                setTmStatus("Kamera aktif — prediksi berjalan...");
+                logSystem("Kamera Teachable Machine diaktifkan", "INFO");
+
+                // Mulai loop prediksi
+                loop();
+            } catch (err) {
+                console.error(err);
+                setTmStatus("Gagal mengakses kamera.");
+                logSystem("Gagal kamera: " + err.message, "ERROR");
+                tmStartBtn.disabled = false;
+            }
+        }
+
+        function stopWebcam() {
+            tmIsRunning = false;
+            if (tmAnimationFrame) {
+                cancelAnimationFrame(tmAnimationFrame);
+                tmAnimationFrame = null;
+            }
+            if (tmWebcam) {
+                tmWebcam.stop();
+                tmWebcam = null;
+            }
+
+            webcamContainer.innerHTML = '';
+            tmPlaceholder.style.display = 'block';
+            webcamContainer.appendChild(tmPlaceholder);
+
+            tmStartBtn.disabled = false;
+            tmStopBtn.disabled = true;
+            setTmStatus("Kamera dihentikan.");
+            logSystem("Kamera Teachable Machine dihentikan", "INFO");
+        }
+
+        async function loop() {
+            if (!tmIsRunning || !tmWebcam) return;
+
+            tmWebcam.update();          // Update frame kamera
+            await predict();
+            tmAnimationFrame = requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            if (!tmModel || !tmWebcam) return;
+
+            try {
+                const prediction = await tmModel.predict(tmWebcam.canvas);
+
+                // Cari prediksi tertinggi
+                let topIndex = 0;
+                let topProb = 0;
+                for (let i = 0; i < tmMaxPredictions; i++) {
+                    if (prediction[i].probability > topProb) {
+                        topProb = prediction[i].probability;
+                        topIndex = i;
+                    }
+                }
+
+                const topClass = prediction[topIndex].className;
+                const confPercent = (topProb * 100).toFixed(1);
+
+                // Update UI prediksi
+                for (let i = 0; i < tmMaxPredictions; i++) {
+                    const item = labelContainer.children[i];
+                    const name = prediction[i].className;
+                    const prob = (prediction[i].probability * 100).toFixed(1);
+                    item.querySelector('.pred-name').textContent = name;
+                    item.querySelector('.pred-prob').textContent = prob + '%';
+                    item.classList.toggle('top', i === topIndex);
+                }
+
+                // --- LOGIKA PENGIRIMAN DENGAN THRESHOLD 85% ---
+                if (topProb >= CONFIDENCE_THRESHOLD) {
+                    // Confidence cukup tinggi
+                    tmCurrentClassEl.textContent = topClass;
+                    tmCurrentConfEl.textContent = `Confidence: ${confPercent}%`;
+                    tmCurrentConfEl.className = 'tm-current-conf high';
+
+                    // Kirim hanya jika berbeda dari yang terakhir dikirim
+                    if (topClass !== tmLastSentClass) {
+                        tmLastSentClass = topClass;
+                        sendData(topClass);   // Kirim nama kelas ke Micro:bit
+                    }
+                } else {
+                    // Confidence di bawah 85% → tetap pakai data sebelumnya
+                    tmCurrentConfEl.textContent = `Confidence: ${confPercent}% (diabaikan, < 85%)`;
+                    tmCurrentConfEl.className = 'tm-current-conf low';
+                    // Tidak mengirim apa-apa, tmLastSentClass tetap
+                }
+            } catch (err) {
+                console.error("Predict error:", err);
+            }
+        }
+    </script>
+</body>
+</html>
