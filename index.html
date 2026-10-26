@@ -403,6 +403,67 @@
         #btn-right { grid-column: 3; grid-row: 2; }
         #btn-down { grid-column: 2; grid-row: 3; }
 
+        /* --- TOMBOL CAPIT & LEPAS (ROBOT TRANSPORTER) --- */
+        .grip-controls {
+            display: flex;
+            gap: 16px;
+            margin-top: 36px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .grip-btn {
+            min-width: 150px;
+            height: 70px;
+            padding: 0 24px;
+            background-color: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            user-select: none;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .grip-btn:hover {
+            transform: scale(1.08) translateY(-3px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 12px 25px rgba(56, 189, 248, 0.25);
+        }
+
+        .grip-btn:active {
+            transform: scale(0.95) translateY(2px);
+            box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Capit sedang menahan (latched) sampai Lepas ditekan */
+        .grip-btn.latched {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
+        }
+
+        .grip-status {
+            width: 100%;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .grip-status.holding {
+            color: var(--success);
+        }
+
         /* --- TEACHABLE MACHINE SECTION --- */
         .tm-controls {
             display: flex;
@@ -718,6 +779,450 @@
                 display: none;
             }
         }
+
+        /* --- TOGGLE FILTER CONFIDENCE 85% --- */
+        .tm-filter-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .tm-filter-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tm-filter-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .tm-filter-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: var(--border-color);
+            border-radius: 28px;
+            transition: background-color 0.3s ease;
+        }
+
+        .slider::before {
+            content: "";
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            top: 4px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+        }
+
+        .switch input:checked + .slider {
+            background-color: var(--success);
+        }
+
+        .switch input:checked + .slider::before {
+            transform: translateX(24px);
+        }
+
+        .switch input:focus-visible + .slider {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
+        .tm-filter-state {
+            font-size: 0.8rem;
+            font-weight: 700;
+            min-width: 28px;
+            text-align: right;
+            color: var(--text-muted);
+        }
+
+        .tm-filter-state.on { color: var(--success); }
+
+        .tm-filter-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* ============================================================
+           PENYEMPURNAAN UI/UX (hanya CSS, logika tidak diubah)
+           ============================================================ */
+
+        ::selection { background: color-mix(in srgb, var(--primary) 35%, transparent); }
+
+        :focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
+        /* Scrollbar tipis */
+        main, .log-content {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+        main::-webkit-scrollbar, .log-content::-webkit-scrollbar { width: 8px; }
+        main::-webkit-scrollbar-thumb, .log-content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 8px;
+        }
+
+        /* --- Header --- */
+        header {
+            position: relative;
+            background-color: color-mix(in srgb, var(--bg-card) 88%, transparent);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        header::after {
+            content: "";
+            position: absolute;
+            left: 0; right: 0; bottom: -1px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0.45;
+            transition: opacity 0.4s ease;
+        }
+
+        header:has(.status-dot.connected)::after {
+            background: linear-gradient(90deg, transparent, var(--success), transparent);
+            opacity: 0.8;
+        }
+
+        .status-badge { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+        .status-dot.connected { animation: dotPulse 2s infinite; }
+        .status-dot.connecting { animation: dotBlink 1s infinite alternate ease-in-out; }
+
+        @keyframes dotPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+            70%  { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes dotBlink {
+            from { opacity: 0.4; }
+            to   { opacity: 1; }
+        }
+
+        .btn-connect:not(.connected) {
+            background-image: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 55%, #a78bfa));
+        }
+
+        .btn-connect:active { transform: translateY(0) scale(0.97); }
+
+        /* --- Sidebar --- */
+        .nav-item { border-left: 4px solid transparent; }
+
+        .nav-item i {
+            width: 22px;
+            text-align: center;
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+
+        .nav-item:hover i { transform: scale(1.15); }
+
+        .nav-item.active {
+            background-image: linear-gradient(90deg, color-mix(in srgb, var(--primary) 18%, transparent), transparent);
+        }
+
+        .nav-item.active i { filter: drop-shadow(0 0 6px var(--primary)); }
+
+        .sidebar-footer { opacity: 0.85; }
+
+        /* --- Area konten --- */
+        main {
+            background-image:
+                radial-gradient(800px 380px at 90% -8%, color-mix(in srgb, var(--primary) 9%, transparent), transparent),
+                radial-gradient(700px 380px at -8% 110%, rgba(167, 139, 250, 0.07), transparent);
+        }
+
+        .section-title { letter-spacing: -0.01em; }
+
+        .section-title i {
+            background-image: linear-gradient(135deg, color-mix(in srgb, var(--primary) 22%, transparent), color-mix(in srgb, #a78bfa 18%, transparent));
+            width: 44px;
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Kartu dashboard --- */
+        .grid-cards .card {
+            --accent: var(--primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .grid-cards .card:nth-child(1) { --accent: var(--warning); }
+        .grid-cards .card:nth-child(2) { --accent: var(--success); }
+        .grid-cards .card:nth-child(3) { --accent: var(--primary); }
+
+        .grid-cards .card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .grid-cards .card:hover { border-color: var(--accent); }
+        .grid-cards .card:hover::before { opacity: 1; }
+
+        .grid-cards .card .card-header i {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            color: var(--accent);
+            background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+            opacity: 1;
+            transition: transform 0.3s ease;
+        }
+
+        .grid-cards .card:hover .card-header i { transform: scale(1.1) rotate(-6deg); }
+
+        .card-value {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        .view-section.active .grid-cards .card {
+            animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+        .view-section.active .grid-cards .card:nth-child(2) { animation-delay: 0.08s; }
+        .view-section.active .grid-cards .card:nth-child(3) { animation-delay: 0.16s; }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- D-Pad --- */
+        .dpad-container { position: relative; }
+
+        .dpad-container::before {
+            content: "";
+            position: absolute;
+            inset: -36px;
+            border-radius: 50%;
+            background: radial-gradient(circle, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 70%);
+            border: 1px dashed var(--border-color);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .dpad-container::after {
+            content: "";
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 34px; height: 34px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+            pointer-events: none;
+        }
+
+        .dpad-btn {
+            position: relative;
+            z-index: 1;
+            background-image: linear-gradient(180deg, color-mix(in srgb, var(--text-main) 5%, transparent), transparent);
+        }
+
+        .dpad-btn:active { background-image: none; }
+
+        /* --- Capit & Lepas --- */
+        .grip-btn {
+            background-image: linear-gradient(180deg, color-mix(in srgb, var(--text-main) 5%, transparent), transparent);
+        }
+
+        .grip-btn:active { background-image: none; }
+
+        #btn-lepas:hover {
+            border-color: var(--warning);
+            color: var(--warning);
+            box-shadow: 0 12px 25px rgba(245, 158, 11, 0.22);
+        }
+
+        .grip-btn.latched {
+            background-image: none;
+            animation: gripGlow 2s infinite alternate ease-in-out;
+        }
+
+        @keyframes gripGlow {
+            from { box-shadow: 0 0 10px rgba(56, 189, 248, 0.35); }
+            to   { box-shadow: 0 0 24px rgba(56, 189, 248, 0.65); }
+        }
+
+        .grip-status {
+            width: auto;
+            margin: 0 auto;
+            padding: 6px 16px;
+            border-radius: 20px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .grip-status.holding {
+            border-color: var(--success);
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
+        /* --- Teachable Machine --- */
+        .tm-input:focus {
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+        }
+
+        .btn-tm:active:not(:disabled) { transform: scale(0.97); }
+
+        .btn-tm-primary {
+            background-image: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 55%, #a78bfa));
+        }
+
+        .btn-tm-secondary:hover:not(:disabled) { transform: translateY(-2px); }
+
+        .tm-filter-toggle,
+        .tm-webcam-card,
+        .tm-predictions-card {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.4s ease;
+        }
+
+        .tm-filter-toggle:hover { border-color: var(--primary); }
+
+        #webcam-container:has(canvas) {
+            border-style: solid;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 25%, transparent);
+        }
+
+        .tm-current-value {
+            background: linear-gradient(135deg, var(--primary), #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            width: fit-content;
+        }
+
+        .tm-pred-item {
+            transition: border-color 0.25s ease, background-color 0.25s ease, transform 0.25s ease;
+        }
+
+        .tm-pred-item:hover { transform: translateX(3px); }
+
+        .tm-pred-item .pred-prob {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .tm-pred-item.top {
+            border-left: 3px solid var(--primary);
+            box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 18%, transparent);
+        }
+
+        .tm-pred-item.top .pred-prob { color: var(--primary); }
+
+        /* --- System Log --- */
+        .log-header i { color: var(--primary); margin-right: 6px; }
+
+        .log-item { border-left: 3px solid var(--border-color); }
+        .log-item:has(.badge-info)  { border-left-color: var(--primary); }
+        .log-item:has(.badge-tx)    { border-left-color: var(--success); }
+        .log-item:has(.badge-rx)    { border-left-color: var(--danger); }
+        .log-item:has(.badge-warn)  { border-left-color: var(--warning); }
+        .log-item:has(.badge-error) { border-left-color: var(--danger); }
+
+        .badge { letter-spacing: 0.04em; }
+
+        .log-msg { font-size: 0.82rem; }
+
+        /* --- Responsif (tablet & HP) --- */
+        @media (max-width: 700px) {
+            header { padding: 0 12px; }
+            .header-controls { gap: 8px; }
+            .theme-separator { padding-right: 8px; }
+            .brand { font-size: 1.1rem; }
+            .status-badge { padding: 6px 10px; }
+
+            .app-container { flex-direction: column; }
+
+            sidebar {
+                width: 100%;
+                flex-direction: row;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 10px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                overflow-x: auto;
+            }
+
+            .nav-item { padding: 10px 14px; white-space: nowrap; border-left-width: 0; border-bottom: 3px solid transparent; }
+            .nav-item:hover { transform: none; }
+            .nav-item.active { border-left-width: 0; border-bottom-color: var(--primary); }
+
+            .sidebar-footer {
+                margin-top: 0;
+                margin-left: auto;
+                padding: 0 4px 0 12px;
+                border-top: none;
+                white-space: nowrap;
+                font-size: 0.7rem;
+            }
+
+            main { padding: 20px 16px; min-height: 0; }
+            .dpad-wrapper { padding: 40px 0; }
+            .dpad-container { grid-template-columns: repeat(3, 76px); grid-template-rows: repeat(3, 76px); gap: 12px; }
+            .grip-btn { min-width: 130px; height: 62px; }
+        }
+
+        /* Hormati pengaturan "kurangi gerakan" */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -825,6 +1330,13 @@
                         <button class="dpad-btn" id="btn-right"><i class="fa-solid fa-chevron-right"></i></button>
                         <button class="dpad-btn" id="btn-down"><i class="fa-solid fa-chevron-down"></i></button>
                     </div>
+
+                    <!-- CAPIT & LEPAS -->
+                    <div class="grip-controls">
+                        <button class="grip-btn" id="btn-capit"><i class="fa-solid fa-hand-fist"></i> Capit</button>
+                        <button class="grip-btn" id="btn-lepas"><i class="fa-solid fa-hand"></i> Lepas</button>
+                        <div class="grip-status" id="gripStatus">Capit: Terlepas</div>
+                    </div>
                 </div>
             </div>
 
@@ -847,6 +1359,20 @@
                     <button id="tmStopBtn" class="btn-tm btn-tm-danger" onclick="stopWebcam()" disabled>
                         <i class="fa-solid fa-stop"></i> Stop
                     </button>
+                </div>
+
+                <div class="tm-filter-toggle">
+                    <div class="tm-filter-info">
+                        <span class="tm-filter-title">Filter Confidence 85%</span>
+                        <span class="tm-filter-desc" id="tmFilterDesc">Aktif: prediksi di bawah 85% diabaikan, data yang dikirim tetap data sebelumnya.</span>
+                    </div>
+                    <div class="tm-filter-right">
+                        <span class="tm-filter-state on" id="tmFilterState">ON</span>
+                        <label class="switch" title="Aktif/nonaktifkan filter 85%">
+                            <input type="checkbox" id="tmFilterSwitch" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="tm-layout">
@@ -1048,7 +1574,7 @@
         async function sendData(data) {
             if (!rxCharacteristic) {
                 logSystem("Gagal kirim: Bluetooth belum terhubung!", "WARN");
-                return;
+                return false;
             }
             try {
                 const encoder = new TextEncoder();
@@ -1058,8 +1584,10 @@
                 txCountEl.innerText = countTx;
 
                 logSystem(data, "TX");
+                return true;
             } catch (error) {
                 logSystem(`Gagal kirim: ${error.message}`, "ERROR");
+                return false;
             }
         }
 
@@ -1099,6 +1627,32 @@
         });
 
         // ============================================================
+        // CAPIT & LEPAS (LATCH: capit tetap menahan sampai Lepas ditekan)
+        // ============================================================
+        let isGripping = false;
+        const btnCapit = document.getElementById('btn-capit');
+        const btnLepas = document.getElementById('btn-lepas');
+        const gripStatusEl = document.getElementById('gripStatus');
+
+        function setGripUI(gripping) {
+            isGripping = gripping;
+            btnCapit.classList.toggle('latched', gripping);
+            gripStatusEl.textContent = gripping ? 'Capit: Menjepit (tekan Lepas untuk melepas)' : 'Capit: Terlepas';
+            gripStatusEl.classList.toggle('holding', gripping);
+        }
+
+        btnCapit.addEventListener('click', async () => {
+            if (isGripping) return;                 // Sudah menjepit, jangan kirim ulang
+            const ok = await sendData('capit');     // Kirim sekali saja
+            if (ok) setGripUI(true);                // Kunci status hanya jika terkirim
+        });
+
+        btnLepas.addEventListener('click', async () => {
+            const ok = await sendData('lepas');
+            if (ok) setGripUI(false);               // Hanya tombol Lepas yang membuka kunci
+        });
+
+        // ============================================================
         // TEACHABLE MACHINE LOGIC
         // ============================================================
         let tmModel = null;
@@ -1108,6 +1662,26 @@
         let tmLastSentClass = null;          // Kelas terakhir yang berhasil dikirim
         let tmAnimationFrame = null;
         const CONFIDENCE_THRESHOLD = 0.85;   // 85%
+        let tmFilterEnabled = true;          // Fitur filter 85% (ON = aktif)
+
+        const tmFilterSwitch = document.getElementById('tmFilterSwitch');
+        const tmFilterState = document.getElementById('tmFilterState');
+        const tmFilterDesc = document.getElementById('tmFilterDesc');
+
+        tmFilterSwitch.addEventListener('change', () => {
+            tmFilterEnabled = tmFilterSwitch.checked;
+            if (tmFilterEnabled) {
+                tmFilterState.textContent = 'ON';
+                tmFilterState.classList.add('on');
+                tmFilterDesc.textContent = 'Aktif: prediksi di bawah 85% diabaikan, data yang dikirim tetap data sebelumnya.';
+                logSystem("Filter confidence 85% diaktifkan", "INFO");
+            } else {
+                tmFilterState.textContent = 'OFF';
+                tmFilterState.classList.remove('on');
+                tmFilterDesc.textContent = 'Nonaktif: semua prediksi tertinggi langsung dikirim, berapa pun confidence-nya.';
+                logSystem("Filter confidence 85% dinonaktifkan", "WARN");
+            }
+        });
 
         const tmStatusEl = document.getElementById('tmStatus');
         const tmCurrentClassEl = document.getElementById('tmCurrentClass');
@@ -1265,11 +1839,16 @@
                 }
 
                 // --- LOGIKA PENGIRIMAN DENGAN THRESHOLD 85% ---
-                if (topProb >= CONFIDENCE_THRESHOLD) {
-                    // Confidence cukup tinggi
+                if (!tmFilterEnabled || topProb >= CONFIDENCE_THRESHOLD) {
+                    // Filter OFF, atau confidence cukup tinggi
                     tmCurrentClassEl.textContent = topClass;
-                    tmCurrentConfEl.textContent = `Confidence: ${confPercent}%`;
-                    tmCurrentConfEl.className = 'tm-current-conf high';
+                    if (!tmFilterEnabled && topProb < CONFIDENCE_THRESHOLD) {
+                        tmCurrentConfEl.textContent = `Confidence: ${confPercent}% (filter OFF)`;
+                        tmCurrentConfEl.className = 'tm-current-conf low';
+                    } else {
+                        tmCurrentConfEl.textContent = `Confidence: ${confPercent}%`;
+                        tmCurrentConfEl.className = 'tm-current-conf high';
+                    }
 
                     // Kirim hanya jika berbeda dari yang terakhir dikirim
                     if (topClass !== tmLastSentClass) {
